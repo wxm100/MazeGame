@@ -68,7 +68,7 @@ git
         self.min_room_size = min_room_size
 
         # actions: turn left/turn right/forward
-        self.action_space = Discrete(self.actions.forward + 1)
+        self.action_space = Discrete(self.actions.toggle + 1)
         self.obstacles: List[Ball] = []
 
     def _gen_grid(self, width: int, height: int):
@@ -223,26 +223,92 @@ git
             fx,fy,fw,fh = regions[0]
             self.agent_pos = (fx+fw//2, fy+fh//2)
         self.agent_dir = random.randint(0, 3)
+    
+
+    def reset(self, **kwargs):
+        obs, info = super().reset(**kwargs)
+        # record initial distance to nearest goal
+        self._goals = [(i,j) for i in range(self.width)
+                            for j in range(self.height)
+                            if isinstance(self.grid.get(i,j), Goal)]
+        # record the history path
+        self.visited = set()
+        start = tuple(self.agent_pos)
+        self.visited.add(start)
+
+        self._old_dist = self._dist_to_goals(self.agent_pos)
+        return obs, info
+    
+    # considering the scenario of multiple goals
+    def _dist_to_goals(self, pos):
+        # Manhattan distance to closest goal
+        return min(abs(pos[0]-gx) + abs(pos[1]-gy) for gx,gy in self._goals)
 
     def step(self, action: int):
         # move Balls
         for b in self.obstacles:
-            ox,oy = b.cur_pos
-            self.grid.set(ox,oy,None)
-            top = (max(ox-1,1), max(oy-1,1))
+            ox, oy = b.cur_pos
+            size_x, size_y = 3, 3
+
+            top_x = min(max(ox-1, 1), self.width  - size_x - 1)
+            top_y = min(max(oy-1, 1), self.height - size_y - 1)
+
             try:
-                newp = self.place_obj(b, top=top, size=(3,3), max_tries=100)
+                self.grid.set(ox, oy, None)
+                newp = self.place_obj(
+                    b,
+                    top=(top_x, top_y),
+                    size=(size_x, size_y),
+                    max_tries=100
+                )
                 b.cur_pos = newp
-            except:
-                self.grid.set(ox,oy,b)
-                b.cur_pos = (ox,oy)
+
+            except (ValueError, AssertionError):
+                # fallback: put the ball back where it was (clamped)
+                ox = min(max(ox, 1), self.width-2)
+                oy = min(max(oy, 1), self.height-2)
+                b.cur_pos = (ox, oy)
+                self.grid.set(ox, oy, b)
 
         obs, reward, term, trunc, info = super().step(action)
         if action == self.actions.forward:
             front = self.grid.get(*self.front_pos)
             if front and front.type=="ball":
-                reward = -1
+                #reward = -1
                 term = True
+
+        #0) reset reward
+        # reward =0
+
+        # 1) Distance-based reward
+        # old_dist = self._old_dist
+        # new_dist = self._dist_to_goals(tuple(self.agent_pos))
+        # # reward for getting closer, vise verse
+        # reward += 0.1 * (old_dist - new_dist)
+        # self._old_dist = new_dist
+        # if new_dist == 0:
+        #     reward+=10
+
+
+        # # 2) Small step penalty to avoid wandering around aimlessly
+        # reward -= 0.01  
+
+        # # 3) Bonus for opening a door
+        # if action == self.actions.toggle:
+        #     fwd = self.front_pos
+        #     cell = self.grid.get(*fwd)
+        #     # if we just opened a door this step
+        #     if isinstance(cell, Door) and cell.is_open:
+        #         reward += 0.05
+
+        # # 4) Encourage exploration
+        # if action == self.actions.forward:
+        #     new_pos = tuple(self.agent_pos)
+        #     if new_pos not in self.visited:
+        #         reward += 0.02    # bonus for exploring new cell
+        #     else:
+        #         reward -= 0.01    # small penalty for backtracking
+        #     self.visited.add(new_pos)
         return obs, reward, term, trunc, info
     
 

@@ -43,7 +43,7 @@ policy_kwargs = dict(
 # 3) Curriculum training loop - include evaluation
 # ------------------------------------------------
 model = None
-base_ckpt = "./ppo_pcg_stage4.zip"
+base_ckpt = "./ppo_pcg_stage100.zip"
 timesteps_per_stage = 100_0000
 
 for stage_idx, cfg in enumerate(Curriculums, start=1):
@@ -68,9 +68,8 @@ for stage_idx, cfg in enumerate(Curriculums, start=1):
         # Further stages: keep learned weights
         model.set_env(venv)
     
-
     model.learn(
-        total_timesteps= min(timesteps_per_stage*1.5,10000000),
+        total_timesteps= timesteps_per_stage,
         reset_num_timesteps=False,
     )
     model.save(f"ppo_pcg_stage{stage_idx}")
@@ -86,17 +85,17 @@ for stage_idx, cfg in enumerate(Curriculums, start=1):
         **cfg
         )
     )
+    for i in range(10):
+        obs, _ = eval_env.reset()
+        frames = []
+        done = False
 
-    obs, _ = eval_env.reset()
-    frames = []
-    done = False
+        while not done:
+            frames.append(eval_env.render())
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, trunc, info = eval_env.step(action)
+            done = done or trunc
 
-    while not done:
-        frames.append(eval_env.render())
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, done, trunc, info = eval_env.step(action)
-        done = done or trunc
-
-    imageio.mimsave(f"ppo_pcg_curriculum_stage{stage_idx}.gif", frames, fps=5)
+        imageio.mimsave(f"ppo_pcg_curriculum_stage{stage_idx}_{i}.gif", frames, fps=5)
 
 print("\n✅ Curriculum training complete.")
