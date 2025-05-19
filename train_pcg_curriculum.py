@@ -22,7 +22,8 @@ def make_vec_env(cfg, n_envs=8):
             goal_count=1,
             lava_length=7,
             min_room_size=5,
-            render_mode="rgb_array",
+            render_mode=None,
+            #render_mode="rgb_array",
             **cfg
         )
         return ImgObsWrapper(env)
@@ -43,7 +44,7 @@ policy_kwargs = dict(
 # 3) Curriculum training loop - include evaluation
 # ------------------------------------------------
 model = None
-base_ckpt = "./ppo_pcg_stage100.zip"
+base_ckpt = "./ppo_pcg_stage2.zip"
 timesteps_per_stage = 100_0000
 
 for stage_idx, cfg in enumerate(Curriculums, start=1):

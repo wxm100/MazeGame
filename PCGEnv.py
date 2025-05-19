@@ -244,7 +244,8 @@ git
         # Manhattan distance to closest goal
         return min(abs(pos[0]-gx) + abs(pos[1]-gy) for gx,gy in self._goals)
 
-    def step(self, action: int):
+    # using default step function
+    def step0(self, action: int):
         # move Balls
         for b in self.obstacles:
             ox, oy = b.cur_pos
