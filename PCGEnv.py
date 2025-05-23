@@ -70,85 +70,110 @@ git
         # actions: turn left/turn right/forward
         self.action_space = Discrete(self.actions.toggle + 1)
         self.obstacles: List[Ball] = []
-
+    
     def _gen_grid(self, width: int, height: int):
         # 1) Outer walls
         self.grid = Grid(width, height)
         self.grid.wall_rect(0, 0, width, height)
 
-        # 2) Iterative BSP splitting
-        regions: List[Tuple[int,int,int,int]] = [(0, 0, width, height)]
+        # 2) Iterative BSP splitting with “door-safe” cuts only
+        regions = [(0, 0, width, height)]
         splits = self.room_count - 1
 
         while splits > 0:
-            # find splittable regions
-            cands = []
+            safe_regions = []
             for idx, (x, y, w, h) in enumerate(regions):
-                can_v = (w >= 2*self.min_room_size+1 and h >= 3)
-                can_h = (h >= 2*self.min_room_size+1 and w >= 3)
-                if can_v or can_h:
-                    cands.append((idx, x, y, w, h, can_v, can_h))
-            if not cands:
+                can_v = (w >= 2*self.min_room_size + 1 and h >= 3)
+                can_h = (h >= 2*self.min_room_size + 1 and w >= 3)
+                if not (can_v or can_h):
+                    continue
+
+                v_cuts, h_cuts = [], []
+
+                # vertical safe cuts (unchanged) …
+                if can_v:
+                    for cut in range(self.min_room_size, w - self.min_room_size):
+                        blocked = False
+                        for j in range(y, y + h):
+                            if isinstance(self.grid.get(x+cut, j), Door):
+                                blocked = True; break
+                            if isinstance(self.grid.get(x+cut-1, j), Door) \
+                            or isinstance(self.grid.get(x+cut+1, j), Door):
+                                blocked = True; break
+                        if not blocked:
+                            v_cuts.append(cut)
+
+                # horizontal safe cuts (with **endpoint** checks)
+                if can_h:
+                    for cut in range(self.min_room_size, h - self.min_room_size):
+                        blocked = False
+
+                        # 1) scan the would-be wall line for overwrites/abutments
+                        for i in range(x, x + w):
+                            # never overwrite a door
+                            if isinstance(self.grid.get(i, y+cut), Door):
+                                blocked = True; break
+                            # never abut a door above/below
+                            if isinstance(self.grid.get(i, y+cut-1), Door) \
+                            or isinstance(self.grid.get(i, y+cut+1), Door):
+                                blocked = True; break
+                        if blocked:
+                            continue
+
+                        # 2) **endpoint** checks: don't drown external corridors
+                        #    left endpoint: (x, y+cut) neighbor at (x-1, y+cut)
+                        if x-1 >= 0:
+                            nbr = self.grid.get(x-1, y+cut)
+                            if isinstance(nbr, Door):
+                                continue
+
+                        #    right endpoint
+                        if x + w < width:
+                            nbr = self.grid.get(x+w, y+cut)
+                            if isinstance(nbr, Door):
+                                continue
+
+                        # passed all tests!
+                        h_cuts.append(cut)
+
+                if v_cuts or h_cuts:
+                    safe_regions.append((idx, x, y, w, h, v_cuts, h_cuts))
+
+            # stop if nothing safe remains
+            if not safe_regions:
                 break
 
-            # pick the largest area region
-            idx, x, y, w, h, can_v, can_h = max(cands, key=lambda t: t[3]*t[4])
+            # pick largest
+            idx, x, y, w, h, v_cuts, h_cuts = max(
+                safe_regions, key=lambda t: t[3] * t[4]
+            )
             regions.pop(idx)
 
-            if can_v and (not can_h or w >= h):
-                # vertical split
-                cut = random.randint(self.min_room_size, w - self.min_room_size - 1)
-
-                # left/right are floor, but above/below are still walls
+            # split …
+            if v_cuts and (not h_cuts or w >= h):
+                cut = random.choice(v_cuts)
                 door_rows = [
-                    j
-                    for j in range(y+1, y+h-1)
-                    if (
-                        self.grid.get(x+cut-1, j) is None and
-                        self.grid.get(x+cut+1, j) is None and
-                        isinstance(self.grid.get(x+cut, j-1), Wall) and
-                        isinstance(self.grid.get(x+cut, j+1), Wall)
-                    )
+                    j for j in range(y+1, y+h-1)
+                    if self.grid.get(x+cut-1, j) is None
+                    and self.grid.get(x+cut+1, j) is None
                 ]
-                if door_rows:
-                    door_j = random.choice(door_rows)
-                else:
-                    door_j = random.randint(y+1, y+h-2)
-
-                # draw that split line
+                door_j = random.choice(door_rows) if door_rows else random.randint(y+1, y+h-2)
                 for j in range(y, y+h):
-                    obj = Door(random.choice(COLOR_NAMES)) if j == door_j else Wall()
-                    self.grid.set(x+cut, j, obj)
-
-                regions.append((x,        y, cut,        h))
-                regions.append((x+cut+1, y, w-cut-1, h))
-
+                    self.grid.set(x+cut, j,
+                                Door(random.choice(COLOR_NAMES)) if j==door_j else Wall())
+                regions += [(x, y, cut, h), (x+cut+1, y, w-cut-1, h)]
             else:
-                # horizontal split
-                cut = random.randint(self.min_room_size, h - self.min_room_size - 1)
-
-                # up/down are floor, but left/right are still walls
+                cut = random.choice(h_cuts)
                 door_cols = [
-                    i
-                    for i in range(x+1, x+w-1)
-                    if (
-                        self.grid.get(i, y+cut-1) is None and
-                        self.grid.get(i, y+cut+1) is None and
-                        isinstance(self.grid.get(i-1, y+cut), Wall) and
-                        isinstance(self.grid.get(i+1, y+cut), Wall)
-                    )
+                    i for i in range(x+1, x+w-1)
+                    if self.grid.get(i, y+cut-1) is None
+                    and self.grid.get(i, y+cut+1) is None
                 ]
-                if door_cols:
-                    door_i = random.choice(door_cols)
-                else:
-                    door_i = random.randint(x+1, x+w-2)
-
+                door_i = random.choice(door_cols) if door_cols else random.randint(x+1, x+w-2)
                 for i in range(x, x+w):
-                    obj = Door(random.choice(COLOR_NAMES)) if i == door_i else Wall()
-                    self.grid.set(i, y+cut, obj)
-
-                regions.append((x, y,       w, cut))
-                regions.append((x, y+cut+1, w, h-cut-1))
+                    self.grid.set(i, y+cut,
+                                Door(random.choice(COLOR_NAMES)) if i==door_i else Wall())
+                regions += [(x, y, w, cut), (x, y+cut+1, w, h-cut-1)]
 
             splits -= 1
 
@@ -195,21 +220,21 @@ git
 
         # 5) Goals
         floor = [
-            (i,j)
+            (i, j)
             for i in range(1, width-1)
             for j in range(1, height-1)
-            if self.grid.get(i,j) is None
+            if self.grid.get(i, j) is None
         ]
         random.shuffle(floor)
         for _ in range(min(self.goal_count, len(floor))):
-            gx,gy = floor.pop()
+            gx, gy = floor.pop()
             self.grid.set(gx, gy, Goal())
 
         # 6) Moving Balls
         self.obstacles = []
         random.shuffle(floor)
         for _ in range(min(self.n_obstacles, len(floor))):
-            ox,oy = floor.pop()
+            ox, oy = floor.pop()
             b = Ball()
             self.grid.set(ox, oy, b)
             b.cur_pos = (ox, oy)
@@ -220,10 +245,11 @@ git
         if floor:
             self.agent_pos = floor.pop()
         else:
-            fx,fy,fw,fh = regions[0]
-            self.agent_pos = (fx+fw//2, fy+fh//2)
+            fx, fy, fw, fh = regions[0]
+            self.agent_pos = (fx + fw//2, fy + fh//2)
         self.agent_dir = random.randint(0, 3)
-    
+
+
 
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
@@ -245,7 +271,7 @@ git
         return min(abs(pos[0]-gx) + abs(pos[1]-gy) for gx,gy in self._goals)
 
     # using default step function
-    def step0(self, action: int):
+    def step(self, action: int):
         # move Balls
         for b in self.obstacles:
             ox, oy = b.cur_pos
