@@ -121,13 +121,14 @@ action, _ = model.predict(obs, deterministic=True)
 | PPO (Curriculum)    | 99% (Stage 1)     | 38% (Stage 17)       | Drops with complexity |
 | Imitation Learning  | 51% (Level 1)     | 15% (Level 6)        | Moderate              |
 | Expert Agent        | ~80% mid-stage    | Varies               | Stable across levels  |
+| EA Agent            | 47%               | Varies               | Low                   |
 
 ## Performance Summary
 
 - **Expert**: 30–80% success depending on complexity
 - **Imitation**: ~90% accuracy; replicates expert strategies
 - **Curriculum PPO**: >80% success on complex stages
-
+- **EA**: 20-50% depends on population size and mutation rate
 ## Troubleshooting
 
 | Issue                     | Fix                                        |
