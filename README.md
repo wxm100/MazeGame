@@ -45,6 +45,12 @@ python train_pcg_curriculum.py
 ```
 Runs curriculum-based PPO training over 17 stages.
 
+### Train EA Agent
+```bash
+python EA_Train.py
+```
+Trains a behavior cloning model from expert data.
+
 ## Configuration
 
 ### Environment Parameters
