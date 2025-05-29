@@ -133,5 +133,3 @@ action, _ = model.predict(obs, deterministic=True)
 
 ## License
 MIT License
-
-```
