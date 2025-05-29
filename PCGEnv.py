@@ -305,37 +305,37 @@ git
                 term = True
 
         #0) reset reward
-        # reward =0
+        reward =0
 
-        # 1) Distance-based reward
-        # old_dist = self._old_dist
-        # new_dist = self._dist_to_goals(tuple(self.agent_pos))
-        # # reward for getting closer, vise verse
-        # reward += 0.1 * (old_dist - new_dist)
-        # self._old_dist = new_dist
-        # if new_dist == 0:
-        #     reward+=10
+        #1) Distance-based reward
+        old_dist = self._old_dist
+        new_dist = self._dist_to_goals(tuple(self.agent_pos))
+        # reward for getting closer, vise verse
+        #reward += 0.1 * (old_dist - new_dist)
+        self._old_dist = new_dist
+        if new_dist == 0:
+            reward+=20
 
 
-        # # 2) Small step penalty to avoid wandering around aimlessly
-        # reward -= 0.01  
+        # 2) Small step penalty to avoid wandering around aimlessly
+        #reward -= 0.01  
 
-        # # 3) Bonus for opening a door
-        # if action == self.actions.toggle:
-        #     fwd = self.front_pos
-        #     cell = self.grid.get(*fwd)
-        #     # if we just opened a door this step
-        #     if isinstance(cell, Door) and cell.is_open:
-        #         reward += 0.05
+        # 3) Bonus for opening a door
+        if action == self.actions.toggle:
+            fwd = self.front_pos
+            cell = self.grid.get(*fwd)
+            # if we just opened a door this step
+            if isinstance(cell, Door) and cell.is_open:
+                reward += 0.05
 
-        # # 4) Encourage exploration
-        # if action == self.actions.forward:
-        #     new_pos = tuple(self.agent_pos)
-        #     if new_pos not in self.visited:
-        #         reward += 0.02    # bonus for exploring new cell
-        #     else:
-        #         reward -= 0.01    # small penalty for backtracking
-        #     self.visited.add(new_pos)
+        # 4) Encourage exploration
+        if action == self.actions.forward:
+            new_pos = tuple(self.agent_pos)
+            if new_pos not in self.visited:
+                reward += 0.01    # bonus for exploring new cell
+            # else:
+            #     reward -= 0.01    # small penalty for backtracking
+            self.visited.add(new_pos)
         return obs, reward, term, trunc, info
     
 
