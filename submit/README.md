@@ -1,16 +1,37 @@
-# MazeGame: Dynamic MiniGrid Environment with Curriculum Learning
+# MazeGame: A PCG-Based Testbed for Comparing Game AI Algorithms
 
-A reinforcement learning framework featuring dynamic maze environments with moving obstacles, expert agents, and multiple learning strategies including PPO, imitation learning, and evolutionary algorithms. Built on the MiniGrid platform.
+This project presents a procedural maze environment framework designed for benchmarking and comparing different AI strategies. Built on MiniGrid, the system generates diverse environments through binary space partitioning (BSP), supports curriculum scaling, and allows side-by-side evaluation of expert planners, reinforcement learning agents, imitation learners, and evolutionary optimizers.
 
 ## Overview
 
-This project implements a PCG-enabled RL environment with dynamic obstacle avoidance, curriculum learning, and expert-guided imitation. Key components include:
+Key features include:
 
-- A BSP-based MiniGrid environment with lava, balls, and doors
-- Dynamic expert agent with flexible danger-aware pathfinding
-- Curriculum-based PPO training
-- Evolutionary strategy agent training
-- Imitation learning from expert trajectories
+- **Procedural Maze Generation**: A BSP-based environment generator with configurable hazards, doors, and layout size.
+- **Curriculum Difficulty Scaling**: 17 progressively harder stages defined in `curriculum.py`.
+- **Multi-Agent Support**:
+  - A* expert with dynamic safety levels
+  - PPO agent using curriculum training
+  - Behavior cloning with expert trajectories
+  - Evolutionary algorithm training via reward feedback
+- **Unified Evaluation Platform**: All agents are trained and evaluated in the same procedurally generated environment.
+
+This setup supports reproducible experimentation and analysis of algorithmic strengths and weaknesses in dynamic game-like environments.
+
+
+- ## File Structure and Module Overview
+
+| File | Description |
+|------|-------------|
+| `PCGEnv.py` | Custom MiniGrid environment supporting procedural maze generation via BSP and hazard configuration |
+| `curriculum.py` | Defines 17 stages of progressively harder environments for curriculum learning |
+| `train_ppo_curriculum.py` | PPO training script that iterates over curriculum stages with model saving and logging |
+| `EA_Train.py` | Evolutionary Algorithm training script using black-box optimization for policy weights |
+| `dynamic_expert_agent.py` | Rule-based A*-inspired expert agent with safety-level planning modes |
+| `PCGtest.py` | Manual control launcher for testing generated mazes interactively |
+| `imitation_rl_trainer.py` | Trainer for behavior cloning using expert trajectories (requires prior data collection) |
+| `README.md` | Project documentation and usage instructions |
+| `*.pkl`, `*.pth`, `*.zip` | Data files: expert demonstrations and saved models |
+
 
 ## Installation
 
