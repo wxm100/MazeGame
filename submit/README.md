@@ -29,6 +29,7 @@ This setup supports reproducible experimentation and analysis of algorithmic str
 | `dynamic_expert_agent.py` | Rule-based A*-inspired expert agent with safety-level planning modes |
 | `PCGtest.py` | Manual control launcher for testing generated mazes interactively |
 | `imitation_rl_trainer.py` | Trainer for behavior cloning using expert trajectories (requires prior data collection) |
+| `expert_collector.py` | Command-line tool to collect and inspect dynamic expert trajectory data; supports trajectory sampling, failure analysis, and export to `.pkl` for imitation training |
 | `README.md` | Project documentation and usage instructions |
 | `*.pkl`, `*.pth`, `*.zip` | Data files: expert demonstrations and saved models |
 
@@ -133,6 +134,19 @@ trainer.train_imitation_learning(
     learning_rate=1e-3,
     validation_split=0.2
 )
+```
+## Expert Data Collector
+
+The `expert_collector.py` module provides an interactive CLI for collecting large-scale expert demonstrations using the dynamic expert agent.
+
+### Features:
+- Automated trajectory collection with success monitoring
+- Failure reason analysis (e.g., timeout, collision, planning failure)
+- Saves data to `.pkl` format for use in imitation learning
+
+### Usage:
+```bash
+python expert_collector.py
 ```
 
 ## Evolutionary Algorithm (EA)
