@@ -137,6 +137,7 @@ action, _ = model.predict(obs, deterministic=True)
 | Imitation overfitting     | Use more data / regularize                 |
 | PPO instability           | Tweak curriculum or hyperparameters        |
 | Memory issues             | Lower batch size or num envs               |
+| EA instability            | Improve fitness function                   |
 
 ## License
 MIT License
